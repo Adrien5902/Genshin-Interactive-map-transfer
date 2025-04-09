@@ -1,4 +1,4 @@
-use crate::{off_chests_to_uno, read_json_file, read_uno_chests_file, Chest};
+use crate::{off_chests_to_uno, read_off_chests, read_uno_chests};
 
 const REF_VALUES: &[(u64, u64)] = &[
     (62, 319),
@@ -17,8 +17,8 @@ const REF_VALUES: &[(u64, u64)] = &[
 
 #[test]
 fn test() {
-    let off_chests = read_json_file::<Vec<Chest>>("all_chests.json").unwrap();
-    let uno_chests = read_uno_chests_file().unwrap();
+    let off_chests = read_off_chests().unwrap();
+    let uno_chests = read_uno_chests().unwrap();
 
     let off_uno_chests_map = off_chests_to_uno(&off_chests, &uno_chests).unwrap();
 

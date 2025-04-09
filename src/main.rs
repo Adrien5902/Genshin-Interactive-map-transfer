@@ -28,15 +28,15 @@ fn off_y_pos_to_uno_y_pos(y_pos: f64) -> f64 {
 }
 
 fn main() {
-    let data = read_json_file::<Vec<TakenChest>>("data.json").unwrap();
+    let marked_data = read_json_file::<OffFile<OffMarkedData>>("mark_map_point_list.json").unwrap();
 
-    let off_chests = read_json_file::<Vec<Chest>>("all_chests.json").unwrap();
-    let uno_chests = read_uno_chests_file().unwrap();
+    let off_chests = read_off_chests().unwrap();
+    let uno_chests = read_uno_chests().unwrap();
 
     let off_uno_chests_map = off_chests_to_uno(&off_chests, &uno_chests).unwrap();
 
     let mut final_str = String::new();
-    for chest in data {
+    for chest in marked_data.data.list {
         if let Some(found_chest) = off_uno_chests_map
             .iter()
             .find(|(off, _)| off.id == chest.point_id)
@@ -118,9 +118,14 @@ fn read_json_file<V: for<'de> Deserialize<'de>>(name: &str) -> Result<V, String>
 
 const ERR: &str = ":(";
 
-fn read_uno_chests_file() -> Result<Vec<Chest>, String> {
-    let file_str = fs::read_to_string("./all_chests_uno.json").map_err(|e| e.to_string())?;
-    let value = serde_json::from_str::<Value>(&file_str).map_err(|e| e.to_string())?;
+#[derive(Deserialize)]
+struct UnoChestsFile {
+    data: Vec<Value>,
+}
+
+fn read_uno_chests() -> Result<Vec<Chest>, String> {
+    let file_str = fs::read_to_string("./markers_all.v4.json").map_err(|e| e.to_string())?;
+    let value = serde_json::from_str::<UnoChestsFile>(&file_str).map_err(|e| e.to_string())?;
 
     fn value_to_chest(chest_value: &Value) -> Option<Chest> {
         match chest_value {
@@ -134,11 +139,30 @@ fn read_uno_chests_file() -> Result<Vec<Chest>, String> {
         }
     }
 
-    match value {
-        Value::Array(arr) => arr
-            .iter()
-            .map(|chest_value| value_to_chest(chest_value).ok_or(ERR.to_string()))
-            .collect(),
-        _ => return Err(ERR.to_string()),
-    }
+    value
+        .data
+        .iter()
+        .map(|chest_value| value_to_chest(chest_value).ok_or(ERR.to_string()))
+        .collect()
+}
+
+#[derive(Deserialize)]
+struct OffFile<DataType> {
+    data: DataType,
+}
+
+#[derive(Deserialize)]
+struct OffMarkedData {
+    list: Vec<TakenChest>,
+}
+
+#[derive(Deserialize)]
+struct OffChestData {
+    point_list: Vec<Chest>,
+    label_list: Vec<Value>,
+}
+
+fn read_off_chests() -> Result<Vec<Chest>, String> {
+    let off_chests_data = read_json_file::<OffFile<OffChestData>>("list.json")?;
+    Ok(off_chests_data.data.point_list)
 }
